@@ -1,102 +1,101 @@
-cells = input("Enter cells: ").replace("_", " ")
-cells = list(cells)
+WIN_ROWS = ({0, 1, 2}, {3, 4, 5}, {6, 7, 8},
+            {0, 3, 6}, {1, 4, 7}, {2, 5, 8},
+            {0, 4, 8}, {2, 4, 6})
 
-field = [
-    [cells[0], cells[1], cells[2]],
-    [cells[3], cells[4], cells[5]],
-    [cells[6], cells[7], cells[8]]
-]
-
-count_x = sum(x.count("X") for x in field)
-count_o = sum(o.count("O") for o in field)
+SYMBOL_X = "X"
+SYMBOL_O = "O"
+SYMBOL_EMPTY = " "
 
 
-def display_field():
-    print("---------")
-    print("|", field[0][0], field[0][1], field[0][2], "|")
-    print("|", field[1][0], field[1][1], field[1][2], "|")
-    print("|", field[2][0], field[2][1], field[2][2], "|")
-    print("---------")
-
-
-display_field()
+def convert_coordinates(x, y):
+    return (x - 1) + (3 * (3 - y))
 
 
 def is_empty(x, y):
-    col = int(x) - 1
-    row = 3 - int(y)
-
-    return field[row][col] == " "
+    """Checks if a selected cell is empty."""
+    return field[convert_coordinates(x, y)] == SYMBOL_EMPTY
 
 
-def place(x, y):
-    col = int(x) - 1
-    row = 3 - int(y)
+def validate_input(coordinates):
+    global input_x
+    global input_y
 
-    field[row][col] = "X"
-
-
-while True:
-    move = input("Enter the coordinates: ")
-    coords = move.split(" ")
-    if coords[0].isalpha() or coords[1].isalpha():
+    try:
+        input_x, input_y = [int(i) for i in coordinates.split()]
+    except ValueError:
         print("You should enter numbers!")
-    elif 1 > (int(coords[0]) or int(coords[1])) or (int(coords[0]) or int(coords[1])) > 3:
-        print("Coordinates must be from 1 to 3!")
-    elif not is_empty(coords[0], coords[1]):
+        return False
+
+    if 1 > (input_x or input_y) or (input_x or input_y) > 3:
+        print("Coordinates should be from 1 to 3!")
+        return False
+    elif not is_empty(input_x, input_y):
         print("This cell is occupied! Choose another one!")
-    else:
-        place(coords[0], coords[1])
+        return False
+
+    return True
+
+
+def is_winner(symbol):
+    this_pos = {i for i in range(len(field)) if field[i] == symbol}
+
+    for x in WIN_ROWS:
+        if this_pos.issuperset(x):
+            return True
+
+    return False
+
+
+def check_win():
+    global winner
+    if is_winner(SYMBOL_X):
+        winner = SYMBOL_X
+    elif is_winner(SYMBOL_O):
+        winner = SYMBOL_O
+
+
+def no_more_turns():
+    return field.count(SYMBOL_EMPTY) == 0
+
+
+def finished():
+    return no_more_turns() or winner is not None
+
+
+def end_game():
+    if winner is not None:
+        print(f"{winner} wins")
+    elif no_more_turns():
+        print("Draw")
+
+
+def place(x, y, char):
+    field[convert_coordinates(x, y)] = char
+
+
+def display_field():
+    """Displays field in console."""
+
+    print(9 * "-")
+    for row in range(3):
+        print("|", " ".join(field[row * 3: 3 + row * 3]), "|")
+    print(9 * "-")
+
+
+winner = None
+current_turn = SYMBOL_X
+input_x = 0
+input_y = 0
+
+field = list(9 * SYMBOL_EMPTY)
+display_field()
+
+while not finished():
+    user_input = input("Enter the coordinates: ")
+
+    if validate_input(user_input):
+        place(input_x, input_y, current_turn)
+        current_turn = SYMBOL_X if current_turn == SYMBOL_O else SYMBOL_O
         display_field()
-        break
-
-
-def check_rows(symbol):
-    for i in range(0, 3):
-        if field[i][0] == symbol \
-                and field[i][1] == symbol \
-                and field[i][2] == symbol:
-            return True
-    return False
-
-
-def check_columns(symbol):
-    for i in range(0, 3):
-        if field[0][i] == symbol \
-                and field[1][i] == symbol \
-                and field[2][i] == symbol:
-            return True
-    return False
-
-
-def check_diagonals(symbol):
-    return field[1][1] == symbol and \
-           ((field[0][0] == symbol and field[2][2] == symbol) or (field[0][2] == symbol and field[2][0] == symbol))
-
-
-def check_win(symbol):
-    return check_rows(symbol) or check_columns(symbol) or check_diagonals(symbol)
-
-
-def check_draw():
-    return not (check_win("X") and check_win("O"))
-
-
-def in_game(array):
-    return any(" " in x for x in array) and not (check_win("X") or check_win("O"))
-
-
-def is_impossible():
-    return abs(count_o - count_x) >= 2 or (check_win("X") and check_win("O"))
-
-
-if is_impossible():
-    print("Impossible")
-elif check_win("X"):
-    print("X wins")
-elif check_win("O"):
-    print("O wins")
-elif in_game(field):
-    print("Game not finished")
-elif check_draw():
-    print("Draw")
+        check_win()
+        end_game()
